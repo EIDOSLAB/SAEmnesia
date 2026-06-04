@@ -1,482 +1,619 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SAEmnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SAEmnesia: Supervised Sparse Autoencoder Finetuning for Concept Unlearning</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --accent: #7ed957;
+      --accent-dark: #5ebd3a;
+      --accent-deep: #3f8f2e;
+      --accent-light: #f1f8ed;
+      --text: #373737;
+      --muted: #55514a;
+      --bg: #e8e3d6;
+      --surface: #f4f0e6;
+      --border: #d4cdc0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #f8f6f1;
-    --bg2: #f0ede6;
-    --ink: #1a1714;
-    --ink2: #4a4540;
-    --ink3: #8a8078;
-    --accent: #1c4f8a;
-    --accent2: #e8f0fa;
-    --rule: rgba(26,23,20,0.12);
-    --serif: 'DM Serif Display', Georgia, serif;
-    --sans: 'DM Sans', system-ui, sans-serif;
-    --mono: 'DM Mono', monospace;
-  }
+    body {
+      font-family: 'Source Sans Pro', Helvetica Neue, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.65;
+    }
 
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--ink);
-    line-height: 1.7;
-    font-size: 17px;
-    -webkit-font-smoothing: antialiased;
-  }
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #373737 0%, #5ea746 56%, #7ed957 100%);
+      color: #fff;
+      padding: 56px 24px 48px;
+      text-align: center;
+    }
+    header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+      font-weight: 700;
+      max-width: 860px;
+      margin: 0 auto 20px;
+      line-height: 1.3;
+    }
+    .authors {
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+      opacity: 0.95;
+    }
+    .authors strong { font-weight: 700; }
+    .authors a { color: #e8e3d6; text-decoration: none; }
+    .authors a:hover { text-decoration: underline; }
+    .affiliation,
+    .corresponding {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      opacity: 0.82;
+      margin-bottom: 8px;
+    }
+    .affiliation-list,
+    .corresponding-list {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-bottom: 28px;
+    }
+    .affiliation-list span,
+    .corresponding-list span {
+      white-space: nowrap;
+    }
+    .affiliation-list .tag,
+    .corresponding-list .tag {
+      display: inline-block;
+      min-width: 1.35rem;
+      text-align: center;
+      padding: 0 0.35rem;
+      margin-right: 0.35rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.22);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .header-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.5);
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.28); }
+    .btn svg { width: 18px; height: 18px; fill: currentColor; }
 
-  /* ── HERO ── */
-  .hero {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 80px 32px 64px;
-    text-align: center;
-    position: relative;
-  }
+    /* ── MAIN LAYOUT ── */
+    main { max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
 
-  .venue-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--accent2);
-    color: var(--accent);
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    padding: 5px 14px;
-    border-radius: 100px;
-    border: 1px solid rgba(28,79,138,0.2);
-    margin-bottom: 28px;
-    letter-spacing: 0.02em;
-  }
+    section { margin-top: 56px; }
+    section h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--accent);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    section h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin: 24px 0 8px;
+    }
+    p { margin-bottom: 14px; color: var(--muted); }
 
-  .venue-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex-shrink: 0;
-  }
+    /* ── ABSTRACT BOX ── */
+    .abstract-box {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 20px 24px;
+      color: var(--text);
+      font-size: 1.0rem;
+    }
 
-  h1 {
-    font-family: var(--serif);
-    font-size: clamp(42px, 7vw, 68px);
-    font-weight: 400;
-    line-height: 1.08;
-    letter-spacing: -0.02em;
-    margin-bottom: 18px;
-    color: var(--ink);
-  }
+    /* ── KEY PROPERTIES ── */
+    .key-props {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .key-props li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.92rem;
+      color: var(--text);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .key-props li::before {
+      content: "✓";
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
 
-  h1 em {
-    font-style: italic;
-    color: var(--accent);
-  }
+    /* ── IMAGES ── */
+    .figure {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .figure img {
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .figure figcaption {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-style: italic;
+    }
 
-  .subtitle {
-    font-size: 18px;
-    color: var(--ink2);
-    font-weight: 300;
-    max-width: 600px;
-    margin: 0 auto 36px;
-    line-height: 1.6;
-  }
+    /* ── RESULTS TABLE ── */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      min-width: 720px;
+    }
+    thead tr { background: var(--accent); color: #fff; }
+    thead th {
+      padding: 10px 12px;
+      font-weight: 600;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    thead tr.subhead { background: var(--accent-dark); }
+    thead tr.metric  { background: var(--accent-deep); }
+    tbody tr:nth-child(odd)  { background: #fbf9f3; }
+    tbody tr:nth-child(even) { background: #f7f3e8; }
+    tbody tr.ours { background: #e8f4df !important; font-weight: 700; }
+    tbody tr:hover { background: #ddeecf !important; }
+    tbody td {
+      padding: 9px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    tbody td:first-child { text-align: left; font-weight: 500; padding-left: 14px; }
+    .best  { font-weight: 800; color: #2f6f23; }
+    .second { text-decoration: underline; }
+    .table-caption {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 10px;
+      text-align: center;
+    }
 
-  /* authors */
-  .authors {
-    font-size: 15px;
-    color: var(--ink2);
-    margin-bottom: 8px;
-  }
-  .authors a {
-    color: var(--ink2);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: var(--rule);
-  }
-  .affil {
-    font-size: 13px;
-    color: var(--ink3);
-    font-family: var(--mono);
-    margin-bottom: 40px;
-  }
+    /* ── TRAINING DETAILS ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .detail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .detail-card .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .detail-card .lbl {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
 
-  /* links row */
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 0;
-  }
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: #1e2433;
+      color: #cdd6f4;
+      border-radius: 10px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin: 12px 0 20px;
+      position: relative;
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; }
+    .copy-btn {
+      position: absolute;
+      top: 10px; right: 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #cdd6f4;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.22); }
 
-  .link-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: opacity 0.15s, transform 0.15s;
-    border: 1px solid transparent;
-    cursor: default;
-  }
+    /* ── CITATION ── */
+    .bibtex-box { position: relative; }
 
-  .link-btn:hover { opacity: 0.8; transform: translateY(-1px); }
-
-  .link-btn.primary {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-  .link-btn.secondary {
-    background: transparent;
-    color: var(--ink2);
-    border-color: var(--rule);
-  }
-  .link-btn.disabled {
-    background: var(--bg2);
-    color: var(--ink3);
-    border-color: var(--rule);
-    cursor: default;
-  }
-  .link-btn.disabled:hover { opacity: 1; transform: none; }
-
-  .link-icon {
-    width: 16px; height: 16px;
-    opacity: 0.8;
-    flex-shrink: 0;
-  }
-
-  /* ── DIVIDER ── */
-  .rule {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0 32px;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  /* ── TEASER / COMING SOON BANNER ── */
-  .soon-section {
-    max-width: 860px;
-    margin: 64px auto;
-    padding: 0 32px;
-  }
-
-  .soon-card {
-    background: var(--bg2);
-    border: 1px solid var(--rule);
-    border-radius: 16px;
-    padding: 56px 48px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .soon-card::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(28,79,138,0.06) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  .soon-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink3);
-    margin-bottom: 16px;
-  }
-
-  .soon-card h2 {
-    font-family: var(--serif);
-    font-size: 32px;
-    font-weight: 400;
-    color: var(--ink);
-    margin-bottom: 14px;
-    line-height: 1.2;
-  }
-
-  .soon-card p {
-    font-size: 16px;
-    color: var(--ink2);
-    max-width: 480px;
-    margin: 0 auto 28px;
-    font-weight: 300;
-  }
-
-  .watch-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--ink3);
-    background: var(--bg);
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--rule);
-  }
-
-  /* ── ABSTRACT ── */
-  .section {
-    max-width: 720px;
-    margin: 0 auto 64px;
-    padding: 0 32px;
-  }
-
-  .section-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink3);
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--rule);
-  }
-
-  .abstract-text {
-    font-size: 17px;
-    color: var(--ink2);
-    line-height: 1.8;
-    font-weight: 300;
-  }
-
-  /* ── KEY PROPERTIES ── */
-  .props-grid {
-    max-width: 860px;
-    margin: 0 auto 64px;
-    padding: 0 32px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-  }
-
-  .prop-card {
-    background: var(--bg);
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    padding: 24px 20px;
-  }
-
-  .prop-num {
-    font-family: var(--serif);
-    font-size: 38px;
-    font-weight: 400;
-    color: var(--accent);
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-
-  .prop-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink);
-    margin-bottom: 4px;
-  }
-
-  .prop-desc {
-    font-size: 13px;
-    color: var(--ink3);
-    line-height: 1.5;
-  }
-
-  /* ── CITATION ── */
-  .citation-section {
-    max-width: 720px;
-    margin: 0 auto 80px;
-    padding: 0 32px;
-  }
-
-  .bibtex {
-    background: var(--ink);
-    color: #a8c4e0;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.7;
-    padding: 28px 28px;
-    border-radius: 12px;
-    overflow-x: auto;
-    white-space: pre;
-    position: relative;
-  }
-
-  .bibtex .kw { color: #e8c77a; }
-  .bibtex .str { color: #9de8b4; }
-
-  .copy-btn {
-    position: absolute;
-    top: 14px; right: 14px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: #aaa;
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 5px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .copy-btn:hover { background: rgba(255,255,255,0.14); color: #eee; }
-
-  /* ── FOOTER ── */
-  footer {
-    border-top: 1px solid var(--rule);
-    padding: 32px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--ink3);
-    font-family: var(--mono);
-  }
-  footer a { color: var(--ink3); text-decoration: underline; text-underline-offset: 3px; }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 600px) {
-    .hero { padding: 56px 20px 48px; }
-    .soon-card { padding: 36px 24px; }
-    .props-grid { grid-template-columns: 1fr 1fr; }
-    .section, .citation-section, .soon-section { padding: 0 20px; }
-  }
-</style>
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 80px;
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
 </head>
 <body>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="venue-pill">
-    <span class="venue-dot"></span>
-    ICML 2026
-  </div>
+<!-- ═══════════════════════════════════════════ HEADER -->
+<header>
+  <div class="badge">ICML 2026</div>
+  <h1>SAEmnesia: Supervised Sparse Autoencoder Finetuning for Concept Unlearning in Diffusion Models</h1>
 
-  <h1>SAE<em>mnesia</em></h1>
-
-  <p class="subtitle">
-    SAEmnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders
+  <p class="authors">
+    <a href="https://scholar.google.com/citations?user=GmFkC7cAAAAJ&hl=it&authuser=1" target="_blank">Enrico Cassano</a><sup>*,1</sup>&nbsp;&nbsp;
+    <a href="https://scholar.google.com/citations?user=JlAby_oAAAAJ&hl=it&authuser=1" target="_blank">Riccardo Renzulli</a><sup>*,1</sup>&nbsp;&nbsp;
+    <a href="https://scholar.google.com/citations?user=vAaWpu8AAAAJ&hl=it&authuser=1" target="_blank">Marco Nurisso</a><sup>2</sup>&nbsp;&nbsp;
+    <a href="https://scholar.google.com/citations?user=hhRQBCYAAAAJ&hl=it&authuser=1" target="_blank">Mirko Zaffaroni</a><sup>3</sup>&nbsp;&nbsp;
+    <a href="https://scholar.google.com/citations?user=Aef-vmEAAAAJ&hl=it&authuser=1" target="_blank">Alan Perotti</a><sup>3</sup>&nbsp;&nbsp;
+    <a href="https://scholar.google.com/citations?user=Pt1gmQYAAAAJ&hl=it&authuser=1" target="_blank">Marco Grangetto</a><sup>1</sup>
   </p>
 
-  <!-- <p class="authors">
-    Riccardo Renzulli &amp; EIDOSLab
-  </p> -->
-  <p class="affil">University of Turin</p>
+  <div class="affiliation-list">
+    <span><span class="tag">1</span>University of Turin, Italy</span>
+    <span><span class="tag">2</span>Politecnico di Torino, Italy</span>
+    <span><span class="tag">3</span>Intesa Sanpaolo AI Research, Italy</span>
+  </div>
 
-  <div class="links">
-    <a class="link-btn primary" href="https://github.com/EIDOSLAB/SAEmnesia" target="_blank">
-      <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-      GitHub
+  <div class="corresponding">
+    <div class="corresponding-list">
+      <span><span class="tag">*</span>Equal contribution:</span>
+      <span><a href="mailto:enrico.cassano@unito.it">enrico.cassano@unito.it</a></span>
+      <span><a href="mailto:riccardo.renzulli@unito.it">riccardo.renzulli@unito.it</a></span>
+    </div>
+  </div>
+
+  <div class="header-links">
+    <!-- TODO: replace hrefs with real links once available -->
+    <a class="btn" href="https://arxiv.org/abs/2509.21379" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1 7V3.5L18.5 9H15zm-1 2h3v2h-3v2h3v2h-3v2H8v-2h3v-2H8v-2h3v-2H8V9h6v2z"/></svg>
+      Paper
     </a>
-    <a class="link-btn primary" href="https://arxiv.org/abs/2509.21379">
-      <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Paper 
-    </a>
-    <a class="link-btn disabled" href="#">
+    <a class="btn" href="#">
       <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
       OpenReview (coming soon)
     </a>
+    <a class="btn" href="https://github.com/EIDOSLAB/SAEmnesia" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.166 6.839 9.489.5.09.682-.218.682-.484 0-.236-.009-.866-.013-1.699-2.782.602-3.369-1.34-3.369-1.34-.455-1.157-1.11-1.465-1.11-1.465-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.891 1.529 2.341 1.089 2.91.833.091-.647.349-1.086.635-1.337-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.269 2.75 1.025A9.56 9.56 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.378.203 2.394.1 2.647.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.307.678.917.678 1.852 0 1.335-.012 2.415-.012 2.741 0 .269.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      Code (coming soon)
+    </a>
+    <a class="btn" href="https://huggingface.co/leno3003/SAEmnesia" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      Checkpoints (coming soon)
+    </a>
   </div>
-</section>
+</header>
 
-<div class="rule"></div>
+<!-- ═══════════════════════════════════════════ MAIN -->
+<main>
 
-<!-- COMING SOON CARD -->
-<section class="soon-section">
-  <div class="soon-card">
-    <p class="soon-label">Status</p>
-    <h2>Project page coming soon</h2>
-    <p>
-      We are preparing the full page with figures, a method overview,
-      interactive demos, and benchmark results. Check back after the proceedings are published.
-    </p>
-    <div class="watch-note">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      Star the repo to get notified
+  <!-- ABSTRACT -->
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <div class="abstract-box">
+      Concept unlearning in diffusion models is hampered by feature splitting, where concepts are distributed across many latent features, making their removal challenging and computationally expensive. We introduce <b>SAEmnesia</b>, a <b>supervised sparse autoencoder</b> framework that overcomes this by enforcing <b>one-to-one concept-neuron mappings</b>. By systematically labeling concepts during training, our method achieves feature centralization, binding each concept to a single, interpretable neuron. This enables highly targeted and efficient concept erasure. Compared to the state-of-the-art sparse autoencoder-based unlearning approach, SAEmnesia reduces hyperparameter search by 96.67% and achieves a 9.22% improvement on the UnlearnCanvas benchmark for objects. Our method also shows superior scalability in sequential unlearning, improving accuracy by 28.4% when removing nine objects, establishing a step forward for precise and controllable concept erasure. Moreover, SAEmnesia effectively suppresses nudity on the I2P benchmark and remains robust to adversarial attacks.
     </div>
-  </div>
-</section>
 
-<!-- ABSTRACT -->
-<section class="section">
-  <p class="section-label">Abstract</p>
-  <p class="abstract-text">
-    Concept unlearning in diffusion models is hampered by feature splitting, where concepts are distributed across many latent features, making their removal challenging and computationally expensive. We introduce SAEmnesia, a supervised sparse autoencoder framework that overcomes this by enforcing one-to-one concept-neuron mappings. By systematically labeling concepts during training, our method achieves feature centralization, binding each concept to a single, interpretable neuron. This enables highly targeted and efficient concept erasure. Compared to the state-of-the-art sparse autoencoder-based unlearning approach, SAEmnesia reduces hyperparameter search by 96.67% and achieves a 9.22% improvement on the UnlearnCanvas benchmark for objects. Our method also shows superior scalability in sequential unlearning, improving accuracy by 28.4% when removing nine objects, establishing a step forward for precise and controllable concept erasure. Moreover, SAEmnesia effectively suppresses nudity on the I2P benchmark and remains robust to adversarial attacks.
-  </p>
-</section>
+    <ul class="key-props">
+      <li>No diffusion model retraining — only the SAE weights are updated</li>
+      <li>Concept-specific latent assignment via cross-entropy supervision</li>
+      <li>Evaluated on the UnlearnCanvas and I2P benchmarks</li>
+      <li>Robustness tested against adversarial attacks</li>
+    </ul>
+  </section>
 
-<!-- KEY PROPERTIES
-<section style="max-width:860px;margin:0 auto 16px;padding:0 32px;">
-  <p class="section-label">Key properties</p>
-</section>
-<div class="props-grid">
-  <div class="prop-card">
-    <div class="prop-num">✦</div>
-    <p class="prop-label">Frozen backbone</p>
-    <p class="prop-desc">No fine-tuning of diffusion model weights — ever.</p>
-  </div>
-  <div class="prop-card">
-    <div class="prop-num">τ</div>
-    <p class="prop-label">Inference-time</p>
-    <p class="prop-desc">Unlearning applied via feature suppression at generation time.</p>
-  </div>
-  <div class="prop-card">
-    <div class="prop-num">↓</div>
-    <p class="prop-label">HPO reduction</p>
-    <p class="prop-desc">Substantially fewer hyperparameters to tune vs. SAeUron.</p>
-  </div>
-  <div class="prop-card">
-    <div class="prop-num">↑</div>
-    <p class="prop-label">Quantitative gains</p>
-    <p class="prop-desc">Improved effectiveness &amp; efficiency scores over SAeUron.</p>
-  </div>
-</div>
+  <!-- OVERVIEW IMAGES -->
+  <section id="overview">
+    <h2>Overview</h2>
+    <figure class="figure">
+      <img src="teaser_saemnesia.png" alt="SAEmnesia Teaser"/>
+      <figcaption>Figure 1 — SAEmnesia concept unlearning in diffusion models. Suppressing dedicated SAE neurons at inference selectively erases a target concept without any diffusion model retraining.</figcaption>
+    </figure>
 
-<div class="rule" style="margin-bottom:64px;"></div> -->
+    <figure class="figure">
+      <img src="pipeline_saemnesia.png" alt="SAEmnesia Pipeline"/>
+      <figcaption>Figure 2 — Full pipeline: supervised SAE finetuning assigns concept-specific neurons; at inference, those neurons are steered with negative multipliers to erase the concept.</figcaption>
+    </figure>
+  </section>
 
-<!-- CITATION -->
-<section class="citation-section">
-  <p class="section-label">Citation</p>
-  <div style="position:relative;">
-    <pre class="bibtex" id="bibtex"><span class="kw">@inproceedings</span>{saemnesia2026,
-  <span class="kw">title</span>     = {<span class="str">SAEmnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders</span>},
-  <span class="kw">author</span>    = {<span class="str">Enrico Cassano and Riccardo Renzulli and Marco Nurisso and Mirko Zaffaroni and Alan Perotti and Marco Grangetto</span>},
-  <span class="kw">booktitle</span> = {<span class="str">Forty-third International Conference on Machine Learning</span>},
-  <span class="kw">year</span>      = {<span class="str">2026</span>},
-  <span class="kw">url</span>      = {<span class="str">https://openreview.net/forum?id=Pa6EoOViOq</span>}
-}</pre>
-    <button class="copy-btn" onclick="
-      navigator.clipboard.writeText(document.getElementById('bibtex').innerText);
-      this.textContent='Copied!';
-      setTimeout(()=>this.textContent='Copy',2000);
-    ">Copy</button>
-  </div>
-</section>
+  <!-- RESULTS -->
+  <section id="results">
+    <h2>Results</h2>
+    <p>Evaluation of <strong>SAEmnesia</strong> against state-of-the-art methods on style and object unlearning on the UnlearnCanvas benchmark. Best results are in <strong>bold</strong>, second-best are <u>underlined</u>.</p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="3">Method</th>
+            <th colspan="6">Effectiveness</th>
+            <th rowspan="2">Avg. ↑</th>
+            <th rowspan="2">FID ↓</th>
+            <th colspan="2">Efficiency</th>
+          </tr>
+          <tr class="subhead">
+            <th colspan="3">Style Unlearning</th>
+            <th colspan="3">Object Unlearning</th>
+            <th>Memory (GB) ↓</th>
+            <th>Storage (GB) ↓</th>
+          </tr>
+          <tr class="metric">
+            <th>UA ↑</th>
+            <th>IRA ↑</th>
+            <th>CRA ↑</th>
+            <th>UA ↑</th>
+            <th>IRA ↑</th>
+            <th>CRA ↑</th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ESD</td>
+            <td class="best">98.58</td>
+            <td>80.97</td>
+            <td>93.96</td>
+            <td>92.15</td>
+            <td>55.78</td>
+            <td>44.23</td>
+            <td>77.61</td>
+            <td>65.55</td>
+            <td>17.8</td>
+            <td>4.3</td>
+          </tr>
+          <tr>
+            <td>FMN</td>
+            <td>88.48</td>
+            <td>56.77</td>
+            <td>46.60</td>
+            <td>45.64</td>
+            <td>90.63</td>
+            <td>73.46</td>
+            <td>66.93</td>
+            <td>131.37</td>
+            <td>17.9</td>
+            <td>4.2</td>
+          </tr>
+          <tr>
+            <td>UCE</td>
+            <td class="second">98.40</td>
+            <td>60.22</td>
+            <td>47.71</td>
+            <td class="second">94.31</td>
+            <td>39.35</td>
+            <td>34.67</td>
+            <td>62.45</td>
+            <td>182.01</td>
+            <td class="second">5.1</td>
+            <td>1.7</td>
+          </tr>
+          <tr>
+            <td>CA</td>
+            <td>60.82</td>
+            <td>96.01</td>
+            <td>92.70</td>
+            <td>46.67</td>
+            <td>90.11</td>
+            <td>81.97</td>
+            <td>78.05</td>
+            <td class="best">54.21</td>
+            <td>10.1</td>
+            <td>4.2</td>
+          </tr>
+          <tr>
+            <td>SalUn</td>
+            <td>86.26</td>
+            <td>90.39</td>
+            <td>95.08</td>
+            <td>86.91</td>
+            <td class="best">96.35</td>
+            <td class="best">99.59</td>
+            <td class="second">92.43</td>
+            <td>61.05</td>
+            <td>30.8</td>
+            <td>4.0</td>
+          </tr>
+          <tr>
+            <td>SEOT</td>
+            <td>56.90</td>
+            <td>94.68</td>
+            <td>84.31</td>
+            <td>23.25</td>
+            <td class="second">95.57</td>
+            <td>82.71</td>
+            <td>72.91</td>
+            <td>62.38</td>
+            <td>7.34</td>
+            <td class="best">0.0</td>
+          </tr>
+          <tr>
+            <td>SPM</td>
+            <td>60.94</td>
+            <td>92.39</td>
+            <td>84.33</td>
+            <td>71.25</td>
+            <td>90.79</td>
+            <td>81.65</td>
+            <td>80.23</td>
+            <td>59.79</td>
+            <td>6.9</td>
+            <td class="best">0.0</td>
+          </tr>
+          <tr>
+            <td>EDiff</td>
+            <td>92.42</td>
+            <td>73.91</td>
+            <td>98.93</td>
+            <td>86.67</td>
+            <td>94.03</td>
+            <td>48.48</td>
+            <td>82.41</td>
+            <td>81.42</td>
+            <td>27.8</td>
+            <td>4.0</td>
+          </tr>
+          <tr>
+            <td>SHS</td>
+            <td>95.84</td>
+            <td>80.42</td>
+            <td>43.27</td>
+            <td>80.73</td>
+            <td>81.15</td>
+            <td>67.99</td>
+            <td>74.90</td>
+            <td>119.34</td>
+            <td>31.2</td>
+            <td>4.0</td>
+          </tr>
+          <tr>
+            <td>SAeUron</td>
+            <td>95.80</td>
+            <td class="best">99.10</td>
+            <td class="best">99.40</td>
+            <td>87.16</td>
+            <td>85.57</td>
+            <td>74.14</td>
+            <td>90.10</td>
+            <td>62.69</td>
+            <td class="best">2.8</td>
+            <td class="second">0.2</td>
+          </tr>
+          <tr class="ours">
+            <td>SAEmnesia (ours)</td>
+            <td>96.60</td>
+            <td class="second">98.67</td>
+            <td class="second">99.30</td>
+            <td class="best">94.65</td>
+            <td>91.39</td>
+            <td class="second">88.48</td>
+            <td class="best">94.85</td>
+            <td class="second">56.15</td>
+            <td class="best">2.8</td>
+            <td class="second">0.2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-caption">Table 1 — UA: Unlearning Accuracy (higher = better erasure). IRA: In-Domain Retention Accuracy. CRA: Cross-Domain Retention Accuracy. FID measures image quality. Memory and Storage reflect inference overhead.</p>
+  </section>
+
+  <!-- TRAINING DETAILS -->
+  <section id="training-details">
+    <h2>Training Details</h2>
+    <p>We trained a TopK SAE with k = 32 and an expansion factor of 16, optimized with Adam.</p>
+    <div class="detail-grid">
+      <div class="detail-card"><div class="val">TopK</div><div class="lbl">SAE Type</div></div>
+      <div class="detail-card"><div class="val">k = 32</div><div class="lbl">Sparsity (TopK)</div></div>
+      <div class="detail-card"><div class="val">×16</div><div class="lbl">Expansion Factor</div></div>
+      <div class="detail-card"><div class="val">5e‑6</div><div class="lbl">Learning Rate</div></div>
+      <div class="detail-card"><div class="val">128</div><div class="lbl">Batch Size</div></div>
+      <div class="detail-card"><div class="val">150</div><div class="lbl">Max Epochs</div></div>
+      <div class="detail-card"><div class="val">5</div><div class="lbl">Early Stop Patience</div></div>
+      <div class="detail-card"><div class="val">Adam</div><div class="lbl">Optimizer</div></div>
+    </div>
+  </section>
+
+  <!-- ACKNOWLEDGEMENTS -->
+  <section id="acknowledgements">
+    <h2>Acknowledgements</h2>
+    <p>This work builds upon <a href="https://github.com/cywinski/SAeUron" target="_blank">SAeUron</a> by Cywinski et al. We thank the authors for releasing their code.</p>
+  </section>
+
+  <!-- CITATION -->
+  <section id="citation">
+    <h2>Citation</h2>
+    <p>If you find SAEmnesia useful in your research, please cite:</p>
+    <div class="bibtex-box">
+      <pre><code id="bibtex">@inproceedings{cassano2026saemnesia,
+  title     = {{SAE}mnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders},
+  author    = {Enrico Cassano and Riccardo Renzulli and Marco Nurisso and Mirko Zaffaroni and Alan Perotti and Marco Grangetto},
+  booktitle = {Forty-third International Conference on Machine Learning},
+  year      = {2026},
+}</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+    </div>
+  </section>
+
+</main>
 
 <!-- FOOTER -->
 <footer>
-  <a href="https://github.com/EIDOSLAB" target="_blank">EIDOSLab</a> · University of Turin · 2026
-  &nbsp;·&nbsp;
-  <a href="https://github.com/EIDOSLAB/SAEmnesia" target="_blank">github.com/EIDOSLAB/SAEmnesia</a>
+  Website template inspired by <a href="https://gaussians-on-demand.github.io/" target="_blank">Gaussians on Demand</a>.
+  &nbsp;·&nbsp; Published at ICML 2026.
 </footer>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('pre');
+  const code = pre.querySelector('code');
+  navigator.clipboard.writeText(code.innerText).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+</script>
 
 </body>
 </html>
