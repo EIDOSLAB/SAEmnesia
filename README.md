@@ -141,6 +141,12 @@ This prints **UA** (Unlearning Accuracy), **IRA** (In-domain Retention Accuracy)
 
 ---
 
+## Acknowledgements
+
+This work builds upon [SAeUron](https://github.com/cywinski/SAeUron) by Cywinski et al. We thank the authors for releasing their code.
+
+---
+
 <div align="center">
 <sub>© 2026 EIDOSLab — University of Turin</sub>
 </div>
