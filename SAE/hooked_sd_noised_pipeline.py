@@ -317,7 +317,6 @@ class HookedDiffusionAbstractPipeline:
         )
         self._num_timesteps = len(timesteps)
         for i, t in enumerate(timesteps):
-            # expand the latents if we are doing classifier free guidance
             latent_model_input = (
                 torch.cat([latents] * 2) if guidance_scale > 1.0 else latents
             )
@@ -325,7 +324,6 @@ class HookedDiffusionAbstractPipeline:
                 latent_model_input, t
             )
 
-            # predict the noise residual
             noise_pred = self.unet(
                 latent_model_input,
                 t,
@@ -603,7 +601,6 @@ class HookedDiffusionAbstractPipeline:
         projection_class_embeddings_input_dim = getattr(unet_config, "projection_class_embeddings_input_dim", None)
 
         if projection_class_embeddings_input_dim is not None:
-            # This is an SDXL UNet, we need to provide added_cond_kwargs
             print("⚠️  Detected SDXL UNet - creating added_cond_kwargs for SD1.5 pipeline")
 
             # Create pooled embeddings from prompt_embeds (use mean)
@@ -672,8 +669,6 @@ class HookedDiffusionAbstractPipeline:
                 noise_pred, t, latents, **extra_step_kwargs, return_dict=False
             )[0]
             
-            # OPTIONAL: Ensure latents stay in correct dtype
-            # latents = latents.to(self.pipe.unet.dtype)
         
         return latents
 
@@ -824,7 +819,6 @@ class HookedStableDiffusionXLPipeline(HookedDiffusionAbstractPipeline):
         add_text_embeds = pooled_prompt_embeds
         
         # Get the text encoder projection dimension
-        # For SDXL, this is typically 1280 (from text_encoder_2)
         if hasattr(self.pipe, 'text_encoder_2') and self.pipe.text_encoder_2 is not None:
             text_encoder_projection_dim = self.pipe.text_encoder_2.config.projection_dim
         else:

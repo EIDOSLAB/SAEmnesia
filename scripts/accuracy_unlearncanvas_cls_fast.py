@@ -17,8 +17,6 @@ from UnlearnCanvas_resources.const import class_available as class_available_ful
 from UnlearnCanvas_resources.const import theme_available as theme_available_full
 from UnlearnCanvas_resources.const import class_available as class_available
 from UnlearnCanvas_resources.const import theme_available as theme_available
-# from UnlearnCanvas_resources.const import class_available_subsample as class_available
-# from UnlearnCanvas_resources.const import theme_available_subsample as theme_available
 
 
 def main(
@@ -46,7 +44,6 @@ def main(
         "vit_large_patch16_224.augreg_in21k", pretrained=True
     ).to(device)
 
-    # First, set head to original full size to load checkpoint
     style_model.head = torch.nn.Linear(1024, len(theme_available_full)).to(device)
     class_model.head = torch.nn.Linear(1024, len(class_available_full)).to(device)
 
@@ -57,8 +54,6 @@ def main(
     style_model.load_state_dict(style_checkpoint["model_state_dict"])
     class_model.load_state_dict(class_checkpoint["model_state_dict"])
 
-    # Now extract only the weights for subsampled themes/classes
-    # Get indices of subsampled items in the full lists
     theme_indices = [theme_available_full.index(t) for t in theme_available]
     class_indices = [class_available_full.index(c) for c in class_available]
 
@@ -74,7 +69,6 @@ def main(
         new_class_head.weight.data = class_model.head.weight.data[class_indices, :]
         new_class_head.bias.data = class_model.head.bias.data[class_indices]
 
-    # Replace heads with subsampled versions
     style_model.head = new_style_head
     class_model.head = new_class_head
 

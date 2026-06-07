@@ -7,12 +7,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from UnlearnCanvas_resources.const import class_available
-# from UnlearnCanvas_resources.const import class_available_subsample as class_available
 
 def run_scripts_sequentially(
     classes_to_unlearn, input_dir, output_dir, style_ckpt, class_ckpt, batch_size
 ):
-    # scripts_path = "/src/saeuron_finetuning/scripts/"
     accuracy_script = os.path.join(SCRIPT_DIR, "accuracy_unlearncanvas_cls_fast.py")
     
     # Ensure the script exists

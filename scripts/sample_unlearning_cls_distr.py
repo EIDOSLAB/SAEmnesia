@@ -28,8 +28,6 @@ from UnlearnCanvas_resources.const import (
     theme_available,
 )
 
-# from UnlearnCanvas_resources.const import class_available_subsample as class_available
-# from UnlearnCanvas_resources.const import theme_available_subsample as theme_available
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch._inductor.config.conv_1x1_as_mm = True
@@ -70,11 +68,10 @@ def main(
     start_from=0,
     start_timestep=0,
     use_sae=True,    # Flag to enable/disable SAE unlearning
-    residual_sae=False,  # Set True for SAEs trained on (output - input), e.g. RIEBench
+    residual_sae=False,  
 ):
     """
     Generate images with optional SAE-based unlearning.
-    Automatically detects whether to use SDXL or SD1.5 pipeline.
     
     Args:
         pipe_checkpoint: Path to the pretrained diffusion model checkpoint
@@ -145,11 +142,6 @@ def main(
     
     model = model.to(device)
 
-    # For SDXL, enable VAE optimizations
-    if is_sdxl and hasattr(model.pipe, 'enable_vae_slicing'):
-        model.pipe.enable_vae_slicing()
-    
-    # Disable VAE tiling if it causes issues
     if hasattr(model.pipe, 'disable_vae_tiling'):
         model.pipe.disable_vae_tiling()
 
