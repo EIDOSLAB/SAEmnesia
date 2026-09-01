@@ -145,8 +145,8 @@ where the hookpoint name is the *directory name* of `--checkpoint_path`:
 └── unet.up_blocks.1.attentions.1/            # hookpoint
     ├── metadata/
     │   └── recovered_object_to_style_index.json
-    ├── <concept_1>/                          # HF dataset (save_to_disk format)
-    └── <concept_2>/
+    ├── <object_1>/                          # HF dataset (save_to_disk format)
+    └── <object_2>/
 ```
 
 `--object_scores_json_path` and `--style_scores_json_path` are the pre-computed concept scores used
