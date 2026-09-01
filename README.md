@@ -35,7 +35,8 @@ SAEmnesia/
 │   ├── run_acc_all_cls.py               # Step 2: run full evaluation pipeline
 │   ├── accuracy_unlearncanvas_cls_fast.py
 │   ├── avg_accuracy_cls.py
-│   ├── finetuning/               # (coming soon)
+│   ├── finetuning/
+│   │   └── sae_finetuning.py            # Supervised SAE finetuning
 │   └── dataset/                  # (coming soon)
 └── requirements.txt
 ```
@@ -125,6 +126,68 @@ PYTHONPATH=. python scripts/run_acc_all_cls.py \
 ```
 
 This prints **UA** (Unlearning Accuracy), **IRA** (In-domain Retention Accuracy), and **CRA** (Cross-domain Retention Accuracy).
+
+---
+
+## Supervised SAE Finetuning
+
+`scripts/finetuning/sae_finetuning.py` is the training script used to obtain the supervised SAE.
+Each object and style concept is assigned to a dedicated latent, either from pre-computed concept
+scores or randomly when training from scratch (`--from_scratch`). 
+
+### Expected inputs
+
+`--activations_dir` must point to a directory of cached concept activations organized per hookpoint,
+where the hookpoint name is the *directory name* of `--checkpoint_path`:
+
+```
+<activations_dir>/
+└── unet.up_blocks.1.attentions.1/            # hookpoint
+    ├── metadata/
+    │   └── recovered_object_to_style_index.json
+    ├── <concept_1>/                          # HF dataset (save_to_disk format)
+    └── <concept_2>/
+```
+
+`--object_scores_json_path` and `--style_scores_json_path` are the pre-computed concept scores used
+for the latent assignment. They are still required as arguments when `--from_scratch` is used, but the
+files do not need to exist in that case (assignment falls back to random).
+
+### Training command
+
+```bash
+torchrun --nproc_per_node <N_GPUS> scripts/finetuning/sae_finetuning.py \
+    --checkpoint_path /path/to/sae_checkpoint/unet.up_blocks.1.attentions.1 \
+    --activations_dir /path/to/concept_activations \
+    --object_scores_json_path /path/to/scores/objects/scores.json \
+    --style_scores_json_path /path/to/scores/styles/scores.json \
+    --save_dir /path/to/output/finetuned_sae \
+    --device cuda \
+    --learning_rate 5e-6 \
+    --num_epochs 150 \
+    --batch_size 128 \
+    --reconstruction_weight 1.0 \
+    --cross_entropy_weight 3.0 \
+    --sparsity_weight 0.01 \
+    --orthogonality_weight 0.1 \
+    --seed 42 \
+    --validation_split 0.2 \
+    --mixed_batches \
+    --num_gpus <N_GPUS> \
+    --gradient_accumulation_steps 1 \
+    --mixed_precision \
+    --patience 5 \
+    --resume \
+    --from_scratch
+```
+
+Notes:
+
+- `--num_gpus` must match `--nproc_per_node`. Drop `torchrun` and run the script with `python` for single-GPU training.
+- `--mixed_precision` trains with AMP: fp32 weights, autocast compute and a gradient scaler.
+- `--resume` restarts from `<save_dir>/current/<hookpoint>` if a checkpoint is there, `--from_scratch` initializes a new SAE instead of loading `--checkpoint_path`.
+- Checkpoints are written to `<save_dir>/best/<hookpoint>` (lowest validation loss) and `<save_dir>/current/<hookpoint>` (last epoch); pass `<save_dir>/best` as `--sae_checkpoint` in Step 1.
+- W&B logging runs in offline mode and is stored under `<save_dir>/wandb`.
 
 ---
 
