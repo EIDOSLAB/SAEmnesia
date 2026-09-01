@@ -116,6 +116,7 @@ class_available_subsample = [
     "Flowers",
     "Frogs",
     "Horses",
+    "Human",
     "Jellyfish",
     "Rabbits",
     "Sandwiches",
