@@ -206,7 +206,7 @@ Notes:
   month = 	 {06--11 Jul},
   publisher =    {PMLR},
   pdf = 	 {https://raw.githubusercontent.com/mlresearch/v306/main/assets/cassano26a/cassano26a.pdf},
-  url = 	 {https://proceedings.mlr.press/v306/cassano26a.html},
+  url = 	 {https://proceedings.mlr.press/v306/cassano26a.html}
 }
 
 ```
