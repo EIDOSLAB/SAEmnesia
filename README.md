@@ -194,12 +194,21 @@ Notes:
 ## Citation
 
 ```bibtex
-@inproceedings{cassano2026saemnesia,
-  title     = {{SAE}mnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders},
-  author    = {Enrico Cassano and Riccardo Renzulli and Marco Nurisso and Mirko Zaffaroni and Alan Perotti and Marco Grangetto},
-  booktitle = {Forty-third International Conference on Machine Learning},
-  year      = {2026},
+@InProceedings{pmlr-v306-cassano26a,
+  title = 	 {{SAE}mnesia: Erasing Concepts in Diffusion Models with Supervised Sparse Autoencoders},
+  author =       {Cassano, Enrico and Renzulli, Riccardo and Nurisso, Marco and Zaffaroni, Mirko and Perotti, Alan and Grangetto, Marco},
+  booktitle = 	 {Proceedings of the 43rd International Conference on Machine Learning},
+  pages = 	 {12001--12023},
+  year = 	 {2026},
+  editor = 	 {Zhang, Tong and Dudik, Miroslav and Jaggi, Martin and Agarwal, Alekh and Li, Sharon and Schuurmans, Dale and Zhu, Jerry and Berkenkamp, Felix and Dong, Hanze and Bietti, Alberto},
+  volume = 	 {306},
+  series = 	 {Proceedings of Machine Learning Research},
+  month = 	 {06--11 Jul},
+  publisher =    {PMLR},
+  pdf = 	 {https://raw.githubusercontent.com/mlresearch/v306/main/assets/cassano26a/cassano26a.pdf},
+  url = 	 {https://proceedings.mlr.press/v306/cassano26a.html},
 }
+
 ```
 
 ---
