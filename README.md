@@ -62,8 +62,8 @@ Download the following files and place them wherever you prefer (paths are passe
 | SAE checkpoint | [leno3003/SAEmnesia](https://huggingface.co/leno3003/SAEmnesia) on HuggingFace — see below |
 | `class_params.pth` | [Google Drive](https://drive.google.com/drive/folders/1NoFDrjJ3dYmadufV2pK203ZED2pZ_hsB?usp=sharing) — see below |
 | `cls_latents_dict_unet.up_blocks.1.attentions.1.pkl` | [Google Drive](https://drive.google.com/drive/folders/1NoFDrjJ3dYmadufV2pK203ZED2pZ_hsB?usp=sharing) — see below |
-| UnlearnCanvas diffusion model (`style50`) | [Google Drive](https://drive.google.com/drive/folders/18tN-7LuxQ89I-MDSjtB5to2dGHDMHyqb) — see below |
-| `style50.pth` and `style50_cls.pth` (classifiers) | [Google Drive](https://drive.google.com/drive/folders/1AoazlvDgWgc3bAyHDpqlafqltmn4vm61) — see below |
+| UnlearnCanvas diffusion model (`style50`) | [NormalUhr/UnlearnCanvas-ckpts](https://huggingface.co/NormalUhr/UnlearnCanvas-ckpts/tree/main/diffusion/diffuser/style50) on HuggingFace — see below |
+| `style50.pth` and `style50_cls.pth` (classifiers) | [NormalUhr/UnlearnCanvas-ckpts](https://huggingface.co/NormalUhr/UnlearnCanvas-ckpts/tree/main/cls_model) on HuggingFace — see below |
 
 ### Downloading the SAE checkpoint
 
@@ -78,16 +78,22 @@ The checkpoint will be saved to the directory you specify (created automatically
 ### Downloading the UnlearnCanvas diffusion model
 
 ```bash
-gdown --folder https://drive.google.com/drive/folders/18tN-7LuxQ89I-MDSjtB5to2dGHDMHyqb \
-    -O /path/to/save/style50
+huggingface-cli download NormalUhr/UnlearnCanvas-ckpts \
+    --include "diffusion/diffuser/style50/*" \
+    --local-dir /path/to/save/unlearncanvas
 ```
+
+The model will be at `/path/to/save/unlearncanvas/diffusion/diffuser/style50` (pass this path as `--pipe_checkpoint`).
 
 ### Downloading the classifiers (`style50.pth` and `style50_cls.pth`)
 
 ```bash
-gdown --folder https://drive.google.com/drive/folders/1AoazlvDgWgc3bAyHDpqlafqltmn4vm61 \
-    -O /path/to/save/classifiers
+huggingface-cli download NormalUhr/UnlearnCanvas-ckpts \
+    --include "cls_model/*" \
+    --local-dir /path/to/save/unlearncanvas
 ```
+
+The classifiers will be at `/path/to/save/unlearncanvas/cls_model/style50.pth` and `/path/to/save/unlearncanvas/cls_model/style50_cls.pth`.
 
 ### Downloading `class_params.pth` and `cls_latents_dict_unet.up_blocks.1.attentions.1.pkl`
 
